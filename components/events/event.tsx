@@ -1,8 +1,10 @@
 /* eslint-disable @next/next/no-img-element */
 import React from 'react';
 
-import Link from 'next/link';
-
+import AddressIcon from '../icons/address-icon';
+import ArrowRightIcon from '../icons/arrow-right-icon';
+import DateIcon from '../icons/date-icon';
+import Button from '../ui/button';
 import classes from './event.module.css';
 
 export interface EventInfo {
@@ -35,14 +37,21 @@ const Event: React.FC<EventProps> = ({ event }) => {
         <div className={classes.summary}>
           <h2>{event.title}</h2>
           <div className={classes.date}>
+            <DateIcon />
             <time>{readableDate}</time>
           </div>
           <div className={classes.address}>
+            <AddressIcon />
             <address>{formattedAddress}</address>
           </div>
         </div>
         <div className={classes.actions}>
-          <Link href={`events/${event.id}`}>Explore Event</Link>
+          <Button link={`events/${event.id}`}>
+            <span className={classes.icon}>
+              <ArrowRightIcon />
+            </span>
+            <span>Explore Event</span>
+          </Button>
         </div>
       </div>
     </li>
