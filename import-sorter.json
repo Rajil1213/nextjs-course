@@ -6,5 +6,6 @@
     "maxExportNamesPerLine": 0,
     "maxNamesPerWrappedLine": 1,
     "ignoreComments": false
-  }
+  },
+  "quoteMark": "double"
 }
