@@ -1,95 +1,250 @@
-# About this repo
-
-This repo contains exercises/projects for [this Udemy Course by Maximilian Schwarzmüller](https://www.udemy.com/course/nextjs-react-the-complete-guide/). Each project/exercise is on a separate branch along with related notes.
-
 # Notes
+
+This branch contains notes for the Routing Module.
 
 ## Introduction
 
-- NextJS - A FullStack React Framework for Production
-- Solves common problems and makes building React apps easier
+- From code-based to file-based
+- Static and Dynamic Routes are possible
 
-## Key Features
+## File-based Routing
 
-- Server-side Rendering
-  - Render the HTML on the server side itself
-  - React renders on the client so the actual rendering (hydration) happens ion the client so the HTML source is mostly empty
-  - User interactions are still handled by React but the initial load contains the full source that was rendered on the server
-- File-based Routing
-  - There is not even a router in React. We need a third-party library and then, create files that replicate these routes for readability
-  - Router provides “routing” functionality across pages
-  - Next uses the filesystem as the routes instead of in code
-- Fullstack capabilities
-  - Easily add backend (server-side) code to your Next/React apps
-  - Storing data, getting data, authentication, etc can be added to your React project
+- Code-based routing involves coding up the routes in one (or more) files
+- NextJS instead infers the routes from the folder structure through the special `/pages` directory
+- For example:
+  - `/pages`
+    - `index.tsx` ⇒ starting page: `my-domain.com/`
+    - `about.tsx` ⇒ `my-domain.com/about`
+    - `/products`
+      - `index.tsx` ⇒ `my-domain.com/products`
+      - `[id].tsx` ⇒ `my-domain.com/products/1`
 
-## Creating a NextJS Project
+## Adding a First Page
 
-[https://nextjs.org](https://nextjs.org)
+- We can create files that acts as pages in the `pages` directory
+  ```tsx
+  // pages/index.tsx
 
-- We will use `pnpm`:
-  ```bash
-  ╰─ pnpm create next-app@latest
-  .../Library/pnpm/store/v3/tmp/dlx-84459  |   +1 +
-  Packages are hard linked from the content-addressable store to the virtual store.
-    Content-addressable store is at: /Users/rajil/Library/pnpm/store/v3
-    Virtual store is at:             ../../Library/pnpm/store/v3/tmp/dlx-84459/node_modules/.pnpm
-  .../Library/pnpm/store/v3/tmp/dlx-84459  | Progress: resolved 1, reused 0, downloaded 1, added 1, done
-  ✔ What is your project named? … nextjs-course
-  ✔ Would you like to use TypeScript with this project? … No / Yes
-  ✔ Would you like to use ESLint with this project? … No / Yes
-  ✔ Would you like to use Tailwind CSS with this project? … No / Yes
-  ✔ Would you like to use `src/` directory with this project? … No / Yes
-  ✔ Use App Router (recommended)? … No / Yes
-  ✔ Would you like to customize the default import alias? … No / Yes
-  Creating a new Next.js app in /Users/rajil/courses/nextjs/nextjs-course.
+  const HomePage = () => {
+    return (
+      <div>
+        <h1>The Home Page</h1>
+      </div>
+    );
+  };
 
-  Using pnpm.
-
-  Initializing project with template: default
+  export default HomePage;
   ```
-- For the subsequent settings we will use:
-  - Typescript ✅
-  - ESLint ✅
-  - Tailwind CSS ❌
-  - `src` directory ❌
-  - `app` router ❌ (does not have all the required features as of this writing)
-  - default import alias ❌
+- The default export is necessary for the routing to work properly i.e, for Next to know what component to render
 
-## The App Router Dilemma
+## Nested Paths
 
-- The App router is an alternative to the pages router that NextJS uses
-- The App router is stable but its `Server Actions` component is still in Alpha and not recommended for production
-- This component allows form manipulation which we will need.
-- So, we’ll be sticking with the pages router
+- To nest paths inside other paths, the parent path must be a directory within which we can created the nested paths.
+- For example, for `/portfolio/list` route, we need a `porfolio` directory inside `pages` with a `list.tsx` file.
 
-## Directory Structure
+## Adding Dynamic Paths and Routes
 
-- The initial project contains the following main directories:
-  - `pages`
-    - Contains our routes (pages)
-  - `public`
-    - Does not contain an `index.html` file because we can choose when a page should be pre-rendered
-  - `styles`
-    - Contains styling
-- Run:
-  `pnpm dev`
+- We use a special filename of the format: `[<placeholder>].tsx`
+- The placeholder is replaced with a concrete value when a user actually accesses a route
+- The concrete value can be extracted with the help of a hook called `useRouter` from `next/router`.
+  ```tsx
+  // src/pages/portfolio/[projectId].tsx
 
-## About the Course
+  import React from 'react';
 
-- Basics and Foundation
-  - File-based routing
-  - Page pre-rendering and data fetching
-  - Combining Standard React and NextJS
-  - API Routes and Fullstack capabilities
-  - Theory/Small Demo and Examples
-- Advanced Concepts (for Production)
-  - Optimization Opportunities
-  - Looking behind the scenes and theory
-  - Deployment and Configuration
-  - Authentication
-  - More Realistic (Bigger) Example Projects
-- Summaries and Refreshers
-  - ReactJS Refresher (not covered in subsequent notes, a separate repo already exists)
-  - NextJS Summary (covered in the separate repo on react)
-  - Challenges & Exercises
+  import { useRouter } from 'next/router';
+
+  const PortfolioProject = () => {
+    const router = useRouter();
+
+    return (
+      <div>
+  			{// query is a special NodeJS.Dict }
+        <h1>The Portfolio Project Page: {router.query.projectId}</h1>
+      </div>
+    );
+  };
+
+  export default PortfolioProject;
+  ```
+- We can also create nested dynamic routes
+  ```tsx
+  // src/pages/clients/[clientId]/clientProjectId].tsx
+
+  import React from "react";
+
+  import { useRouter } from "next/router";
+
+  const ClientProjectId = () => {
+    // make sure this is in PascalCase (eslint issue)
+    const router = useRouter();
+
+    return (
+      <div>
+        <h1>
+          This is the page for client {router.query.clientId}&apos;s project{" "}
+          {router.query.clientProjectId}
+        </h1>
+      </div>
+    );
+  };
+
+  export default ClientProjectId;
+  ```
+
+## Catch-All Routes
+
+- For example, we want to read blogs from `2022/12` with the route `/2022/12/`
+- For this, we create a file with the format: `[...slug].tsx`
+- Example:
+  ```tsx
+  // pages/blog/[...slug].tsx
+
+  import React from "react";
+
+  import { useRouter } from "next/router";
+
+  const BlogPostsPage = () => {
+    const router = useRouter();
+    return (
+      <div>
+        <h1>This is the Blog Posts Page: {JSON.stringify(router.query)}</h1>
+        {/* {"slug":["2023","01"]} */}
+      </div>
+    );
+  };
+
+  export default BlogPostsPage;
+  ```
+
+## Navigating with the `Link` Component
+
+- Use `Link` from `next/link`
+- Example:
+  ```tsx
+  import Link from "next/link";
+
+  const HomePage = () => {
+    return (
+      <div>
+        <h1>The Home Page</h1>
+        <ul>
+          <li>
+            <Link href="/portfolio">Portfolio</Link>
+          </li>
+          <li>
+            <Link href="/blog/2023/12">Blog</Link>
+          </li>
+          <li>
+            <Link href="/clients">Clients</Link>
+          </li>
+        </ul>
+      </div>
+    );
+  };
+
+  export default HomePage;
+  ```
+
+## Navigating to Dynamic Routes
+
+- This works just like React:
+  ```tsx
+  // pages/clients/index.tsx
+
+  import React from "react";
+
+  import Link from "next/link";
+
+  const ClientsPage = () => {
+    return (
+      <div>
+        <h1>Welcome to the Clients Page</h1>
+        <ul>
+          {[1, 2, 3, 4, 5, 6].map((val) => {
+            return (
+              <li key={val}>
+                <Link href={`clients/${val}`}>Client {val}</Link>
+              </li>
+            );
+          })}
+        </ul>
+      </div>
+    );
+  };
+
+  export default ClientsPage;
+  ```
+
+## Passing an Object to the `href` prop
+
+- The object takes the `pathname` (with the placeholder) and the `query` which holds an object with the concrete value:
+  ```tsx
+  {
+    [1, 2, 3, 4, 5, 6].map((val) => {
+      return (
+        <li key={val}>
+          <Link
+            href={{
+              pathname: "clients/[id]",
+              query: { id: val }
+            }}
+          >
+            Client {val}
+          </Link>
+        </li>
+      );
+    });
+  }
+  ```
+
+#### Navigating Programmatically
+
+- We can use the `push` method from the object returned by `useRouter()` to achieve programmatic routing
+  ```tsx
+  import React, { ChangeEvent, SyntheticEvent, useState } from "react";
+
+  import { useRouter } from "next/router";
+
+  const ClientID = () => {
+    const router = useRouter();
+    const clientId = router.query.clientId;
+    const [projectId, setProjectId] = useState<string>("");
+
+    const loadProjectHandler = (e: SyntheticEvent) => {
+      e.preventDefault();
+
+      if (projectId.length === 0) return;
+      if (!clientId) return;
+
+      router.push({
+        pathname: "/clients/[clientId]/[clientProjectId]",
+        query: { clientId, clientProjectId: projectId }
+      });
+    };
+
+    return (
+      <div>
+        <h1>This is the page for client {router.query.clientId}</h1>
+        <hr />
+        <h1> Projects </h1>
+        <form onSubmit={loadProjectHandler}>
+          <h1>
+            <input
+              type="number"
+              onChange={(e: ChangeEvent<HTMLInputElement>) => setProjectId(e.target.value)}
+              placeholder="Enter Project ID"
+            />
+          </h1>
+          <button>Load</button>
+        </form>
+      </div>
+    );
+  };
+
+  export default ClientID;
+  ```
+
+## Custom Error Page
+
+- We can add our own custom error page by using a special file called `404.tsx` next to `_app.tsx`.
