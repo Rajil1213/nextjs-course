@@ -1,11 +1,11 @@
 /* eslint-disable @next/next/no-img-element */
-import React from 'react';
+import React from "react";
 
-import AddressIcon from '../icons/addressIcon';
-import ArrowRightIcon from '../icons/arrowRighticon';
-import DateIcon from '../icons/dateIcon';
-import Button from '../ui/button';
-import classes from './event.module.css';
+import AddressIcon from "../icons/addressIcon";
+import ArrowRightIcon from "../icons/arrowRightIcon";
+import DateIcon from "../icons/dateIcon";
+import Button from "../ui/button";
+import classes from "./event.module.css";
 
 export interface EventInfo {
   id: string;
