@@ -5,6 +5,7 @@ import { useRouter } from "next/router";
 import EventsList from "@/components/events/eventList";
 import ResultsTitle from "@/components/events/resultsTitle";
 import Button from "@/components/ui/button";
+import ErrorAlert from "@/components/ui/errorAlert";
 import { getFilteredEvents } from "@/data/dummy-data";
 
 const FilteredEvents = () => {
@@ -17,7 +18,9 @@ const FilteredEvents = () => {
 
   const invalidFilter = (
     <div className="center">
-      <h1>Invalid Filter</h1>
+      <ErrorAlert>
+        <p>Invalid Filter</p>
+      </ErrorAlert>
       <Button link="/events">Show All Events</Button>
     </div>
   );
