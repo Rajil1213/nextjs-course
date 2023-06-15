@@ -1,11 +1,38 @@
-const HomePage = () => {
+import { GetStaticProps } from 'next';
+
+import data from '@/data/dummy-backend.json';
+
+type ProductInfo = {
+  id: string;
+  title: string;
+  description: string;
+};
+
+interface ProductInfoProps {
+  products: Array<ProductInfo>;
+}
+
+const HomePage: React.FC<ProductInfoProps> = ({ products }) => {
   return (
     <ul>
-      <li>Product 1</li>
-      <li>Product 2</li>
-      <li>Product 3</li>
+      {products.map((product) => {
+        return (
+          <li key={product.id}>
+            {product.title} <p>{product.description}</p>
+          </li>
+        );
+      })}
     </ul>
   );
+};
+
+export const getStaticProps: GetStaticProps<ProductInfoProps> = async () => {
+  return {
+    props: {
+      products: data.products
+    },
+    revalidate: 20
+  };
 };
 
 export default HomePage;
