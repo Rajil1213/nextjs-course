@@ -1,17 +1,30 @@
-import React from 'react';
+import React, { MouseEvent } from "react";
 
-import Link from 'next/link';
+import Link from "next/link";
 
-import classes from './button.module.css';
+import classes from "./button.module.css";
 
-interface ButtonProps {
-  link: string;
-}
+type ButtonProps =
+  | {
+      onClick: (e: MouseEvent<HTMLButtonElement>) => void;
+      link?: never;
+    }
+  | {
+      link: string;
+      onClick?: never;
+    };
 
-const Button: React.FC<React.PropsWithChildren<ButtonProps>> = ({ link, children }) => {
+const Button: React.FC<React.PropsWithChildren<ButtonProps>> = (props) => {
+  if (props.onClick) {
+    return (
+      <button className={classes.btn} onClick={props.onClick}>
+        {props.children}
+      </button>
+    );
+  }
   return (
-    <Link href={link} className={classes.btn}>
-      {children}
+    <Link href={props.link} className={classes.btn}>
+      {props.children}
     </Link>
   );
 };
