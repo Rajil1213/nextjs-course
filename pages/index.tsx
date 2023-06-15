@@ -1,8 +1,9 @@
 import { GetStaticProps } from 'next';
+import Link from 'next/link';
 
 import data from '@/data/dummy-backend.json';
 
-type ProductInfo = {
+export type ProductInfo = {
   id: string;
   title: string;
   description: string;
@@ -18,7 +19,7 @@ const HomePage: React.FC<ProductInfoProps> = ({ products }) => {
       {products.map((product) => {
         return (
           <li key={product.id}>
-            {product.title} <p>{product.description}</p>
+            <Link href={`/${product.id}`}>{product.title}</Link>
           </li>
         );
       })}
