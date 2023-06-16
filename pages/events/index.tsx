@@ -1,6 +1,7 @@
 import React from "react";
 
 import { GetStaticProps } from "next";
+import Head from "next/head";
 import { useRouter } from "next/router";
 
 import EventsList from "@/components/events/eventList";
@@ -25,6 +26,10 @@ const Events: React.FC<EventsProps> = (props) => {
 
   return (
     <>
+      <Head>
+        <title>All NextJS Events</title>
+        <meta name="description" content="Check out all events" />
+      </Head>
       <EventsSearch onSearch={eventsSearchHandler} />
       <EventsList events={props.events} />
     </>
