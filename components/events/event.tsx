@@ -1,6 +1,8 @@
 /* eslint-disable @next/next/no-img-element */
 import React from "react";
 
+import Image from "next/image";
+
 import { EventsResponseModel } from "@/services/events";
 
 import AddressIcon from "../icons/addressIcon";
@@ -24,7 +26,13 @@ const Event: React.FC<EventProps> = ({ event }) => {
 
   return (
     <li className={classes.item}>
-      <img src={`/` + `${event.image}`} alt={event.title} />
+      <Image
+        src={`/` + `${event.image}`}
+        alt={event.title}
+        width={250}
+        height={160}
+        loading="lazy"
+      />
       <div className={classes.content}>
         <div className={classes.summary}>
           <h2>{event.title}</h2>

@@ -1,8 +1,10 @@
 /* eslint-disable @next/next/no-img-element */
-import AddressIcon from '../icons/addressIcon';
-import DateIcon from '../icons/dateIcon';
-import classes from './eventLogistics.module.css';
-import LogisticsItem from './logisticsItem';
+import Image from "next/image";
+
+import AddressIcon from "../icons/addressIcon";
+import DateIcon from "../icons/dateIcon";
+import classes from "./eventLogistics.module.css";
+import LogisticsItem from "./logisticsItem";
 
 interface EventLogisticsInfo {
   date: string;
@@ -24,7 +26,7 @@ const EventLogistics: React.FC<EventLogisticsInfo> = (props) => {
   return (
     <section className={classes.logistics}>
       <div className={classes.image}>
-        <img src={`/${image}`} alt={imageAlt} />
+        <Image src={`/${image}`} alt={imageAlt} width={500} height={500} />
       </div>
       <ul className={classes.list}>
         <LogisticsItem icon={DateIcon}>
