@@ -5,7 +5,11 @@ import { GetStaticPaths, GetStaticProps } from "next";
 import EventContent from "@/components/event-detail/eventContent";
 import EventLogistics from "@/components/event-detail/eventLogistics";
 import EventSummary from "@/components/event-detail/eventSummary";
-import { EventsResponseModel, getEventById } from "@/services/events";
+import {
+  EventsResponseModel,
+  getAllEvents,
+  getEventById,
+} from "@/services/events";
 
 interface EventDetailProps {
   event?: EventsResponseModel;
@@ -62,12 +66,16 @@ export const getStaticProps: GetStaticProps<EventDetailProps> = async (context) 
   return {
     props: {
       event
-    }
+    },
+    revalidate: 10
   };
 };
 
-export const getStaticPaths: GetStaticPaths<{ eventId: string }> = () => {
-  const idsToPreload = ["e1", "e2"];
+export const getStaticPaths: GetStaticPaths<{ eventId: string }> = async () => {
+  // only load featured events
+  const allEvents = await getAllEvents();
+  const idsToPreload = allEvents.filter((event) => event.isFeatured).map((event) => event.id);
+
   const paths = idsToPreload.map((eventId) => ({ params: { eventId } }));
 
   return {
