@@ -59,3 +59,13 @@ export const getEventById = async (id: string): Promise<EventsResponseModel | un
 
   return event;
 };
+
+export const getFilteredEvents = async (year: number, month: number) => {
+  const allEvents = await getAllEvents();
+  const filteredEvents = allEvents.filter((event) => {
+    const eventDate = new Date(event.date);
+    return eventDate.getFullYear() === year && eventDate.getMonth() === month - 1;
+  });
+
+  return filteredEvents;
+};
