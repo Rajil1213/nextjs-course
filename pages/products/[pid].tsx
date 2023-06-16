@@ -4,7 +4,7 @@ import { GetStaticPaths, GetStaticProps } from 'next';
 
 import data from '@/data/dummy-backend.json';
 
-import { ProductInfo } from './';
+import { ProductInfo } from '../';
 
 interface ProductDetailPageProps {
   productInfo?: ProductInfo | undefined;
