@@ -13,9 +13,13 @@ const ResultsTitle: React.FC<ResultsTitleProps> = (props) => {
     year: "numeric"
   });
 
+  let title = "Events in " + humanReadableDate;
+
+  if (humanReadableDate.includes("Invalid Date")) title = "Date is Invalid";
+
   return (
     <section className={classes.title}>
-      <h1>Events in {humanReadableDate}</h1>
+      <h1>{title}</h1>
       <Button link="/events">Show all events</Button>
     </section>
   );
