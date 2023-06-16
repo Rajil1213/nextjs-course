@@ -1,263 +1,99 @@
-# Project: Pre-rendering and Data Fetching
+# Optimizing NextJS Apps
 
-## Setup
+## Introduction
 
-- Migrate the dummy data to firebase by creating a dummy realtime database
+- Adding Meta and `<head>` tags
+- Re-using Components, Logic and Configuration
+- Optimizing Images
 
-## SSG on the Homepage
+## The Need for the `head` Metadata
 
-- This page requires SEO and is not likely to change too often.
-- So, either static site generation or server side props.
-- Here, `getServerSideProps` would make more sense as we do not need to update it on every request.
-- For this, we will create a `services` directory that talks with the firebase API (make sure you set up a test realtime database).
-- We will also validate the response coming from the API with `zod`
-- We will get the API base URI from the node environment using the `dotenv` package. You need to prepend `NODE_ENV=development` to the `dev` script in `package.json`:
+- The `<head>` content is necessary for search engines and browsers
 
-```tsx
-// services/events.ts
+## Configuring the `head` content
 
-import dotenv from "dotenv";
-import { z } from "zod";
-
-// load config from .env.[NODE_ENV].local
-// make sure to prepend NODE_ENV=development to the `dev` script in package.json
-dotenv.config({
-  path: process.cwd() + `.env.${process.env.NODE_ENV}.local`
-});
-
-export const EventResponse = z.object({
-  id: z
-    .string({ required_error: "id is required" })
-    .trim()
-    .min(2, "id must be at least two characters")
-    .startsWith("e", "id must start with e"),
-  title: z.string({ required_error: "title is required" }).trim().min(1, "title cannot be empty"),
-  description: z.string({ required_error: "description is required" }),
-  image: z
-    .string({ required_error: "image is required" })
-    .trim()
-    .startsWith("images", "path to images must begin with `images`"),
-  location: z
-    .string({ required_error: "location is required" })
-    .trim()
-    .min(1, "location cannot be empty"),
-  date: z.date(),
-  isFeatured: z.boolean()
-});
-
-export type EventsResponseModel = z.infer<typeof EventResponse>;
-
-export const getAllEvents = async (): Promise<Array<EventsResponseModel>> => {
-  const resp = await fetch(`${process.env.FIREBASE_URI}/events`);
-  const data = await resp.json();
-
-  const respEvents: Array<EventsResponseModel> = [];
-
-  // transform data
-  for (const key in data) {
-    respEvents.push({
-      id: key,
-      ...data[key]
-    });
-  }
-
-  // validate against zod schema
-  const events = z.array(EventResponse).parse(respEvents);
-  return events;
-};
-```
-
-We can replace our `EventInfo` type from the previous project with that from zod (`EventsResponse`).
-
-- We then, use it in our homepage as well as the `allEvents` page:
+- We use the `Head` component from `next/head`
+- NextJS injects the content of the `Head` component to the actual `head` tag in the generated HTML page.
   ```tsx
-  interface HomePageProps {
-    featuredEvents: Array<EventsResponseModel>;
-  }
-
   export default function Home(props: HomePageProps) {
     return (
       <div>
+        <Head>
+          <title>NextJS Events</title>
+          <meta name="description" content="Find the most exciting events near you..." />
+        </Head>
         <EventsList events={props.featuredEvents} />
       </div>
     );
   }
-
-  export const getStaticProps: GetStaticProps<HomePageProps> = async () => {
-    const events = await getAllEvents();
-    const featuredEvents = events.filter((event) => event.isFeatured);
-
-    return {
-      props: {
-        featuredEvents
-      },
-      revalidate: 20
-    };
-  };
   ```
 
-## For Dynamic Pages
+## A Common Head
 
-- We also want the individual event pages to be crawlable as well.
-- So, we define another function insides the events’ service that gets events by their id:
+- We might want to separate the `Head` content to a separate variable that is prepended to all types of responses (data and error)
+
+## Working with the `_app.tsx` file
+
+- Global Head Settings across all pages
   ```tsx
-  export const getEventById = async (id: string): Promise<EventsResponseModel | undefined> => {
-    const events = await getAllEvents();
-    const event = events.find((event) => event.id === id);
-
-    return event;
-  };
+  export default function App({ Component, pageProps }: AppProps) {
+    return (
+      <Layout>
+        <Head>
+          <title>NextJS Events</title>
+          <meta name="description" content="Find the most exciting events near you" />
+          <meta name="viewport" content="initial-scale=1.0, width=device-width" />
+        </Head>
+        <Component {...pageProps} />
+      </Layout>
+    );
+  }
   ```
-- We can then, use this service inside `getStaticProps` in our `[eventId].tsx` page:
+- NextJS automatically merges head content by taking the latest one in case of conflicts
+
+## `_document.tsx`
+
+- Must be directly under the `pages` directory
+- Allows customizing the entire HTML document
+- Has to be a class-based component
   ```tsx
-  import React from "react";
+  import Document, { Head, Html, Main, NextScript } from "next/document";
 
-  import { GetStaticPaths, GetStaticProps } from "next";
-
-  import EventContent from "@/components/event-detail/eventContent";
-  import EventLogistics from "@/components/event-detail/eventLogistics";
-  import EventSummary from "@/components/event-detail/eventSummary";
-  import { EventsResponseModel, getEventById } from "@/services/events";
-
-  interface EventDetailProps {
-    event?: EventsResponseModel;
+  class MyDocument extends Document {
+    render() {
+      return (
+        <Html lang="en">
+          <Head />
+          <body>
+            <Main />
+            <NextScript />
+          </body>
+        </Html>
+      );
+    }
   }
 
-  const EventDetail: React.FC<EventDetailProps> = ({ event }) => {
-    if (!event) return <p className="center">Loading...</p>;
-
-    return (
-      <>
-        <EventSummary title={event.title} />
-        <EventLogistics
-          date={event.date}
-          address={event.location}
-          image={event.image}
-          imageAlt={event.title}
-        />
-        <EventContent>
-          <p>{event.description}</p>
-        </EventContent>
-      </>
-    );
-  };
-
-  export const getStaticProps: GetStaticProps<EventDetailProps> = async (context) => {
-    const { params } = context;
-    if (!params)
-      return {
-        redirect: true,
-        props: {}
-      };
-
-    const eventID = params.eventId;
-    if (!eventID)
-      return {
-        redirect: true,
-        props: {}
-      };
-
-    if (typeof eventID !== "string")
-      return {
-        redirect: true,
-        props: {}
-      };
-
-    const event = await getEventById(eventID);
-
-    if (!event)
-      return {
-        notFound: true,
-        props: {}
-      };
-
-    return {
-      props: {
-        event
-      },
-      revalidate: 20
-    };
-  };
-
-  export const getStaticPaths: GetStaticPaths<{ eventId: string }> = () => {
-    const idsToPreload = ["e1", "e2"];
-    const paths = idsToPreload.map((eventId) => ({ params: { eventId } }));
-
-    return {
-      paths,
-      fallback: true
-    };
-  };
-
-  export default EventDetail;
+  export default MyDocument;
   ```
-
-## Slug Page
-
-- Will need server side props as we cannot determine which filter to pre-generate for
-- Moreover, this page does not really need SEO. So, we can use client-side fetching as well instead of ServerSideProps
-- With server side props:
+  Note that the `Head` component is now imported from `next/document` and not `next/head`
+- One use of this is that we can add overlays by adding a div in this document:
   ```tsx
-  type FilteredEventsProps =
-    | {
-        filteredEvents: Array<EventsResponseModel>;
-        hasError: false;
-      }
-    | {
-        filteredEvents: Record<string, never>;
-        hasError: true;
-      };
-
-  const FilteredEvents: React.FC<FilteredEventsProps> = (props) => {
-    const router = useRouter();
-
-    const invalidFilter = (
-      <div className="center">
-        <ErrorAlert>
-          <p>Invalid Filter</p>
-        </ErrorAlert>
-        <Button link="/events">Show All Events</Button>
-      </div>
-    );
-
-    // invalid cases
-    if (props.hasError) return invalidFilter;
-
-    return (
-      <>
-        <ResultsTitle date={`${router.query?.slug}`} />
-        <EventsList events={props.filteredEvents} />
-      </>
-    );
-  };
-
-  export const getServerSideProps: GetServerSideProps<FilteredEventsProps> = async (context) => {
-    const slug = context.params?.slug;
-    const errorProps: { props: FilteredEventsProps } = {
-      props: {
-        filteredEvents: {},
-        hasError: true
-      }
-    };
-
-    if (!slug || !Array.isArray(slug) || slug.length !== 2) {
-      return errorProps;
-    }
-
-    const [year, month] = slug;
-    const numYear = +year;
-    const numMonth = +month;
-
-    if (isNaN(numYear) || isNaN(numMonth)) return errorProps;
-
-    const filteredEvents = await getFilteredEvents(numYear, numMonth);
-    return {
-      props: {
-        filteredEvents,
-        hasError: false
-      }
-    };
-  };
-
-  export default FilteredEvents;
+  <body>
+  	<div id="overlays"/>
+  		<Main>
+  		...
+  </body>
   ```
+
+## A Closer Look at Images
+
+- The Images via `<img>` tag are not optimized
+- These images are huge, unoptimized images that always use the same format (instead of an optimized image format like `webp`)
+
+## The Next Image Component
+
+- The `Image` component will create multiple versions of an image on-the-fly depending upon the client capabilities.
+- We can pass in the `width` and `height` of the image to the component that determines the size of the image on the device (and not the actual width and height of the image).
+- Finding the right width and height will be a matter of hit and trial.
+- The optimized images are stored in the `cache/images` directory inside the build directory i.e., `.next`.
+- Images can be lazy loaded so that images that are not part of the viewport are not loaded by NextJS
