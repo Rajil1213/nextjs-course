@@ -1,8 +1,10 @@
 import dotenv from "dotenv";
 import { z } from "zod";
 
-// load config from .env
-dotenv.config();
+// load config from .env.[NODE_ENV].local
+dotenv.config({
+  path: process.cwd() + `.env.${process.env.NODE_ENV}.local`
+});
 
 export const EventResponse = z.object({
   id: z
@@ -36,7 +38,7 @@ export const getAllEvents = async (): Promise<Array<EventsResponseModel>> => {
   const resp = await fetch(uri);
   const data = await resp.json();
 
-  const respEvents: Array<EventsResponseModel> = [];
+  const respEvents: Array<unknown> = [];
 
   // transform data
   for (const key in data) {
