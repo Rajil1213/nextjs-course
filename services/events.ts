@@ -52,3 +52,10 @@ export const getAllEvents = async (): Promise<Array<EventsResponseModel>> => {
   const events = z.array(EventResponse).parse(respEvents);
   return events;
 };
+
+export const getEventById = async (id: string): Promise<EventsResponseModel | undefined> => {
+  const events = await getAllEvents();
+  const event = events.find((event) => event.id === id);
+
+  return event;
+};
