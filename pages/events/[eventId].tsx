@@ -1,37 +1,18 @@
 import React from "react";
 
-import { useRouter } from "next/router";
+import { GetStaticPaths, GetStaticProps } from "next";
 
 import EventContent from "@/components/event-detail/eventContent";
 import EventLogistics from "@/components/event-detail/eventLogistics";
 import EventSummary from "@/components/event-detail/eventSummary";
-import ErrorAlert from "@/components/ui/errorAlert";
-import { getEventById } from "@/data/dummy-data";
+import { EventsResponseModel, getEventById } from "@/services/events";
 
-const EventDetail = () => {
-  const router = useRouter();
-  const eventId = router.query.eventId;
+interface EventDetailProps {
+  event?: EventsResponseModel;
+}
 
-  if (!eventId) {
-    return (
-      <ErrorAlert>
-        <p>NO EVENT FOUND</p>
-      </ErrorAlert>
-    );
-  }
-
-  if (typeof eventId === "object") {
-    return <p>Malformed Query Params</p>;
-  }
-
-  const event = getEventById(eventId);
-  if (!event) {
-    return (
-      <ErrorAlert>
-        <p>Event with id {eventId} not found.</p>
-      </ErrorAlert>
-    );
-  }
+const EventDetail: React.FC<EventDetailProps> = ({ event }) => {
+  if (!event) return <p className="center">Loading...</p>;
 
   return (
     <>
@@ -47,6 +28,52 @@ const EventDetail = () => {
       </EventContent>
     </>
   );
+};
+
+export const getStaticProps: GetStaticProps<EventDetailProps> = async (context) => {
+  const { params } = context;
+  if (!params)
+    return {
+      redirect: true,
+      props: {}
+    };
+
+  const eventID = params.eventId;
+  if (!eventID)
+    return {
+      redirect: true,
+      props: {}
+    };
+
+  if (typeof eventID !== "string")
+    return {
+      redirect: true,
+      props: {}
+    };
+
+  const event = await getEventById(eventID);
+
+  if (!event)
+    return {
+      notFound: true,
+      props: {}
+    };
+
+  return {
+    props: {
+      event
+    }
+  };
+};
+
+export const getStaticPaths: GetStaticPaths<{ eventId: string }> = () => {
+  const idsToPreload = ["e1", "e2"];
+  const paths = idsToPreload.map((eventId) => ({ params: { eventId } }));
+
+  return {
+    paths,
+    fallback: true
+  };
 };
 
 export default EventDetail;
