@@ -1,149 +1,130 @@
-# Project: Event Management
-
-## Planning the Project
-
-- Show featured events in the home page
-- Show all events in the `/events` route
-- Show information about a particular event with the `/events/:id` route
-- Filter events by date (year and month) with the `/events/:slug`
+# Project: Pre-rendering and Data Fetching
 
 ## Setup
 
-- Create files that reflect the above routes
-- Add Dummy Data
-- Each event will also have an image. These images need to be stored in the `public` directory.
-- This directory is special in that the files in this directory are served statically by Next
+- Migrate the dummy data to firebase by creating a dummy realtime database
 
-## Creating Regular React Components
+## SSG on the Homepage
 
-- These should not be in the `pages` directory as they become routes
-- So, we create a new directory called `components`
-- In here, we create a component that can be reused across all our pages namely, the `Event` component that contains the event details:
-  ```tsx
-  /* eslint-disable @next/next/no-img-element */
-  import React from "react";
+- This page requires SEO and is not likely to change too often.
+- So, either static site generation or server side props.
+- Here, `getServerSideProps` would make more sense as we do not need to update it on every request.
+- For this, we will create a `services` directory that talks with the firebase API (make sure you set up a test realtime database).
+- We will also validate the response coming from the API with `zod`
+- We will get the API base URI from the node environment using the `dotenv` package. You need to prepend `NODE_ENV=development` to the `dev` script in `package.json`:
 
-  import Link from "next/link";
+```tsx
+// services/events.ts
 
-  export interface EventInfo {
-    id: string;
-    title: string;
-    description: string;
-    location: string;
-    date: string;
-    image: string;
-    isFeatured: boolean;
-  }
+import dotenv from "dotenv";
+import { z } from "zod";
 
-  interface EventProps {
-    event: EventInfo;
-  }
+// load config from .env.[NODE_ENV].local
+// make sure to prepend NODE_ENV=development to the `dev` script in package.json
+dotenv.config({
+  path: process.cwd() + `.env.${process.env.NODE_ENV}.local`
+});
 
-  const Event: React.FC<EventProps> = ({ event }) => {
-    const readableDate = new Date(event.date).toLocaleDateString("en-US", {
-      day: "numeric",
-      month: "long",
-      year: "numeric"
+export const EventResponse = z.object({
+  id: z
+    .string({ required_error: "id is required" })
+    .trim()
+    .min(2, "id must be at least two characters")
+    .startsWith("e", "id must start with e"),
+  title: z.string({ required_error: "title is required" }).trim().min(1, "title cannot be empty"),
+  description: z.string({ required_error: "description is required" }),
+  image: z
+    .string({ required_error: "image is required" })
+    .trim()
+    .startsWith("images", "path to images must begin with `images`"),
+  location: z
+    .string({ required_error: "location is required" })
+    .trim()
+    .min(1, "location cannot be empty"),
+  date: z.date(),
+  isFeatured: z.boolean()
+});
+
+export type EventsResponseModel = z.infer<typeof EventResponse>;
+
+export const getAllEvents = async (): Promise<Array<EventsResponseModel>> => {
+  const resp = await fetch(`${process.env.FIREBASE_URI}/events`);
+  const data = await resp.json();
+
+  const respEvents: Array<EventsResponseModel> = [];
+
+  // transform data
+  for (const key in data) {
+    respEvents.push({
+      id: key,
+      ...data[key]
     });
-    return (
-      <li>
-        <img src={`/` + `${event.image}`} alt={event.title} />
-        <div>
-          <div>
-            <h2>{event.title}</h2>
-            <div>
-              <time>{readableDate}</time>
-            </div>
-            <div>
-              <address>{event.location}</address>
-            </div>
-          </div>
-          <div>
-            <Link href="">Explore Event</Link>
-          </div>
-        </div>
-      </li>
-    );
-  };
+  }
 
-  export default Event;
-  ```
-- This component can then be used in a another component that display a list of Events which then can be used in the homepage:
+  // validate against zod schema
+  const events = z.array(EventResponse).parse(respEvents);
+  return events;
+};
+```
+
+We can replace our `EventInfo` type from the previous project with that from zod (`EventsResponse`).
+
+- We then, use it in our homepage as well as the `allEvents` page:
   ```tsx
-  import EventsList from "@/components/events/eventList";
-  import { getFeaturedEvents } from "@/data/dummy-data";
+  interface HomePageProps {
+    featuredEvents: Array<EventsResponseModel>;
+  }
 
-  export default function Home() {
-    const featuredEvents = getFeaturedEvents();
-
+  export default function Home(props: HomePageProps) {
     return (
       <div>
-        <h1>The Home Page</h1>
-        <EventsList events={featuredEvents} />
+        <EventsList events={props.featuredEvents} />
       </div>
     );
   }
-  ```
 
-## Adding Styling
+  export const getStaticProps: GetStaticProps<HomePageProps> = async () => {
+    const events = await getAllEvents();
+    const featuredEvents = events.filter((event) => event.isFeatured);
 
-- Next support scoped CSS modules out-of-the-box
-- We define the css inside a `*module.css` file located next to the component where it is to be applied.
-- We then import it in our component:
-  ```tsx
-  import classes from "./eventList.module.css";
-
-  interface EventsListProps {
-    events: Array<EventInfo>;
-  }
-
-  const EventsList: React.FC<EventsListProps> = ({ events }) => {
-    return (
-      <ul className={classes.list}>
-        {events.map((event) => (
-          <Event key={event.id} event={event} />
-        ))}
-      </ul>
-    );
+    return {
+      props: {
+        featuredEvents
+      },
+      revalidate: 20
+    };
   };
-
-  export default EventsList;
   ```
 
-## Adding Buttons and Icons
+## For Dynamic Pages
 
-- For these reusable UI components, we create a `components/ui` directory.
-- For icons, we create `components/icon` directory with icons from heroicons
+- We also want the individual event pages to be crawlable as well.
+- So, we define another function insides the events’ service that gets events by their id:
+  ```tsx
+  export const getEventById = async (id: string): Promise<EventsResponseModel | undefined> => {
+    const events = await getAllEvents();
+    const event = events.find((event) => event.id === id);
 
-## Adding the Event Detail Page
-
-- Create components and use `useRouter` to fetch the information about IDs
+    return event;
+  };
+  ```
+- We can then, use this service inside `getStaticProps` in our `[eventId].tsx` page:
   ```tsx
   import React from "react";
 
-  import { useRouter } from "next/router";
+  import { GetStaticPaths, GetStaticProps } from "next";
 
   import EventContent from "@/components/event-detail/eventContent";
   import EventLogistics from "@/components/event-detail/eventLogistics";
   import EventSummary from "@/components/event-detail/eventSummary";
-  import { getEventById } from "@/data/dummy-data";
+  import { EventsResponseModel, getEventById } from "@/services/events";
 
-  const EventDetail = () => {
-    const router = useRouter();
-    const eventId = router.query.eventId;
+  interface EventDetailProps {
+    event?: EventsResponseModel;
+  }
 
-    if (!eventId) {
-      return <p>NO EVENT FOUND</p>;
-    }
-
-    if (typeof eventId === "object") {
-      return <p>Malformed Query Params</p>;
-    }
-
-    const event = getEventById(eventId);
-    if (!event) {
-      return <p>Event with id {eventId} not found.</p>;
-    }
+  const EventDetail: React.FC<EventDetailProps> = ({ event }) => {
+    if (!event) return <p className="center">Loading...</p>;
 
     return (
       <>
@@ -161,154 +142,121 @@
     );
   };
 
+  export const getStaticProps: GetStaticProps<EventDetailProps> = async (context) => {
+    const { params } = context;
+    if (!params)
+      return {
+        redirect: true,
+        props: {}
+      };
+
+    const eventID = params.eventId;
+    if (!eventID)
+      return {
+        redirect: true,
+        props: {}
+      };
+
+    if (typeof eventID !== "string")
+      return {
+        redirect: true,
+        props: {}
+      };
+
+    const event = await getEventById(eventID);
+
+    if (!event)
+      return {
+        notFound: true,
+        props: {}
+      };
+
+    return {
+      props: {
+        event
+      },
+      revalidate: 20
+    };
+  };
+
+  export const getStaticPaths: GetStaticPaths<{ eventId: string }> = () => {
+    const idsToPreload = ["e1", "e2"];
+    const paths = idsToPreload.map((eventId) => ({ params: { eventId } }));
+
+    return {
+      paths,
+      fallback: true
+    };
+  };
+
   export default EventDetail;
   ```
 
-## Adding a General Layout Wrapper
+## Slug Page
 
-- This is where the `pages/_app.tsx` file comes into play
-- This is the wrapper for all our pages
-- Different pages are passed to this component as we switch routes
-- Let’s create a `layout` component to style our pages with nav bars.
-
-## All Events
-
-- We can simply reuse the EventsList component and use the `getAllEvents` helper defined in the dummy data.
-
-## Filtering Events
-
-- First create the component
-- For this, we need to refactor the Button component so that it can also accept a click handler and we render a no-link button if it is passed:
+- Will need server side props as we cannot determine which filter to pre-generate for
+- Moreover, this page does not really need SEO. So, we can use client-side fetching as well instead of ServerSideProps
+- With server side props:
   ```tsx
-  type ButtonProps =
+  type FilteredEventsProps =
     | {
-        onClick: (e: React.MouseEvent<HTMLButtonElement>) => void;
-        link?: never;
+        filteredEvents: Array<EventsResponseModel>;
+        hasError: false;
       }
     | {
-        link: string;
-        onClick?: never;
+        filteredEvents: Record<string, never>;
+        hasError: true;
       };
 
-  const Button: React.FC<React.PropsWithChildren<ButtonProps>> = (props) => {
-    if (props.onClick) {
-      return (
-        <button className={classes.btn} onClick={props.onClick}>
-          {props.children}
-        </button>
-      );
-    }
-    return (
-      <Link href={props.link} className={classes.btn}>
-        {props.children}
-      </Link>
+  const FilteredEvents: React.FC<FilteredEventsProps> = (props) => {
+    const router = useRouter();
+
+    const invalidFilter = (
+      <div className="center">
+        <ErrorAlert>
+          <p>Invalid Filter</p>
+        </ErrorAlert>
+        <Button link="/events">Show All Events</Button>
+      </div>
     );
-  };
 
-  export default Button;
-  ```
-- Then, we can create the component itself:
-  ```tsx
-  const EventsSearch: React.FC<React.PropsWithChildren> = (props) => {
-    return (
-      <form className={classes.form}>
-        <div className={classes.controls}>
-          <div className={classes.control}>
-            <label htmlFor="year">Year</label>
-            <select name="year" id="year">
-              <option value="2021">2021</option>
-              <option value="2022">2022</option>
-            </select>
-          </div>
-          <div className={classes.control}>
-            <label htmlFor="month">Month</label>
-            <select name="month" id="month">
-              <option value="1">January</option>
-              <option value="2">February</option>
-              <option value="3">March</option>
-              <option value="4">April</option>
-              <option value="5">May</option>
-              <option value="6">June</option>
-              <option value="7">July</option>
-              <option value="8">August</option>
-              <option value="9">September</option>
-              <option value="10">October</option>
-              <option value="11">November</option>
-              <option value="12">December</option>
-            </select>
-          </div>
-        </div>
-        <Button onClick={(e: React.MouseEvent<HTMLButtonElement>) => console.log("clicked")} />
-      </form>
-    );
-  };
-
-  export default EventsSearch;
-  ```
-- Then, we add the submit logic:
-  ```tsx
-  const EventsSearch: React.FC<EventsSearchProps> = ({ onSearch }) => {
-    const yearRef = useRef<HTMLSelectElement>(null);
-    const monthRef = useRef<HTMLSelectElement>(null);
-
-    const submitHandler = (e: React.MouseEvent<HTMLButtonElement>) => {
-      e.preventDefault();
-
-      const year = yearRef.current?.value;
-      const month = monthRef.current?.value;
-
-      if (!year || !month) {
-        console.log("could not get month and year, returning...");
-        console.log(`year= ${year}, month= ${month}`);
-        return;
-      }
-
-      onSearch(year, month);
-    };
-  ```
-  The `yearRef` and `monthRef` are added as refs to the select tags respectively.
-- The `onSearch` function is passed from the `events/index.tsx`:
-  ```tsx
-  	...
-  	const eventsSearchHandler = (year: string, month: string) => {
-      const filteredEventsPath = `/events/${year}/${month}`;
-      router.push(filteredEventsPath);
-    };
+    // invalid cases
+    if (props.hasError) return invalidFilter;
 
     return (
       <>
-        <EventsSearch onSearch={eventsSearchHandler} />
-        <EventsList events={allEvents} />
+        <ResultsTitle date={`${router.query?.slug}`} />
+        <EventsList events={props.filteredEvents} />
       </>
     );
-  ```
-- We, then, implement the filter logic in the `[...slug].tsx` file:
-  ```tsx
-  const FilteredEvents = () => {
-    const router = useRouter();
-    const filterData = router.query.slug;
+  };
 
-    if (!filterData) {
-      return <p className="center">Loading...</p>;
+  export const getServerSideProps: GetServerSideProps<FilteredEventsProps> = async (context) => {
+    const slug = context.params?.slug;
+    const errorProps: { props: FilteredEventsProps } = {
+      props: {
+        filteredEvents: {},
+        hasError: true
+      }
+    };
+
+    if (!slug || !Array.isArray(slug) || slug.length !== 2) {
+      return errorProps;
     }
 
-    if (!Array.isArray(filterData)) return <p>Invalid Filter</p>;
-    if (filterData.length !== 2) return <p>Invalid Filter</p>;
-
-    const [year, month] = filterData;
+    const [year, month] = slug;
     const numYear = +year;
     const numMonth = +month;
 
-    if (isNaN(numYear) || isNaN(numMonth) || numMonth > 12 || numMonth < 1)
-      return <p>Invalid Filter</p>;
+    if (isNaN(numYear) || isNaN(numMonth)) return errorProps;
 
-    const filteredEvents = getFilteredEvents({ year: numYear, month: numMonth });
-
-    return (
-      <>
-        <EventsList events={filteredEvents} />
-      </>
-    );
+    const filteredEvents = await getFilteredEvents(numYear, numMonth);
+    return {
+      props: {
+        filteredEvents,
+        hasError: false
+      }
+    };
   };
 
   export default FilteredEvents;
