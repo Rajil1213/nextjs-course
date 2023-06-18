@@ -1,4 +1,4 @@
-import React, { PropsWithChildren, useState } from "react";
+import React, { PropsWithChildren, useEffect, useState } from "react";
 
 export interface NotificationData {
   title: string;
@@ -14,6 +14,19 @@ const NotificationContext = React.createContext({
 
 export const NotificationContextProvider: React.FC<PropsWithChildren> = (props) => {
   const [notification, setNotifcation] = useState<NotificationData | null>(null);
+
+  useEffect(() => {
+    if (!notification || notification.status === "pending") return;
+
+    const timer = setTimeout(() => {
+      hideNotificationHandler();
+    }, 5000);
+
+    // unmount
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [notification]);
 
   const showNotificationHandler = (notificationData: NotificationData) => {
     setNotifcation(notificationData);
