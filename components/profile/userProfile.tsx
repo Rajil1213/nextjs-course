@@ -16,10 +16,26 @@ const UserProfile: React.FC = () => {
   //   return <p className={classes.profile}>Loading...</p>;
   // }
 
+  const passwordChangeHandler = async ({
+    oldPassword,
+    newPassword
+  }: {
+    oldPassword: string;
+    newPassword: string;
+  }) => {
+    const result = await fetch("/api/users/change-password", {
+      method: "PATCH",
+      body: JSON.stringify({ oldPassword, newPassword })
+    });
+
+    const data = await result.json();
+    console.log(data);
+  };
+
   return (
     <section className={classes.profile}>
       <h1>Your User Profile</h1>
-      <ProfileForm />
+      <ProfileForm onPasswordChange={passwordChangeHandler} />
     </section>
   );
 };
