@@ -23,8 +23,14 @@ const Comments: React.FC<CommentsProps> = (props) => {
     setShowComments((prevStatus) => !prevStatus);
   };
 
-  const addCommentHandler = (commentData: CommentData) => {
+  const addCommentHandler = async (commentData: CommentData) => {
     // send data to API
+    const result = await fetch(`/api/comments/${eventId}`, {
+      method: "POST",
+      body: JSON.stringify({ ...commentData })
+    });
+    const data = await result.json();
+    console.log(data);
   };
 
   return (
