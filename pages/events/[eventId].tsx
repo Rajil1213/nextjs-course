@@ -6,11 +6,8 @@ import Head from "next/head";
 import EventContent from "@/components/event-detail/eventContent";
 import EventLogistics from "@/components/event-detail/eventLogistics";
 import EventSummary from "@/components/event-detail/eventSummary";
-import {
-  EventsResponseModel,
-  getAllEvents,
-  getEventById,
-} from "@/services/events";
+import Comments from "@/components/input/comments";
+import { EventsResponseModel, getAllEvents, getEventById } from "@/services/events";
 
 interface EventDetailProps {
   event?: EventsResponseModel;
@@ -34,6 +31,7 @@ const EventDetail: React.FC<EventDetailProps> = ({ event }) => {
       <EventContent>
         <p>{event.description}</p>
       </EventContent>
+      <Comments eventId={event.id} />
     </>
   );
 };

@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import Head from "next/head";
 
 import EventsList from "@/components/events/eventList";
+import NewsletterRegistration from "@/components/input/newsletterRegistration";
 import { EventsResponseModel, getAllEvents } from "@/services/events";
 
 const inter = Inter({ subsets: ["latin"] });
@@ -18,6 +19,7 @@ export default function Home(props: HomePageProps) {
         <title>NextJS Events</title>
         <meta name="description" content="Find the most exciting events near you..." />
       </Head>
+      <NewsletterRegistration />
       <EventsList events={props.featuredEvents} />
     </div>
   );
