@@ -1,12 +1,12 @@
-import { readFileSync, writeFileSync } from 'fs';
-import { NextApiHandler, NextApiRequest } from 'next';
-import path from 'path';
+import { readFileSync, writeFileSync } from "fs";
+import { NextApiHandler, NextApiRequest } from "next";
+import path from "path";
 
-const buildFilePath = (filename: string): string => {
+export const buildFilePath = (filename: string): string => {
   return path.join(process.cwd(), "data", filename);
 };
 
-const readFeedbackFromFile = (filepath: string): unknown[] => {
+export const readFeedbackFromFile = (filepath: string): unknown[] => {
   try {
     const fileContents = readFileSync(filepath);
     const data = JSON.parse(fileContents.toString()) as unknown[];
