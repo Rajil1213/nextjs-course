@@ -1,25 +1,20 @@
-import { useEffect } from "react";
-
-import { useSession } from "next-auth/react";
-import { useRouter } from "next/router";
-
 import ProfileForm from "./profileForm";
 import classes from "./userProfile.module.css";
 
 const UserProfile: React.FC = () => {
-  // Redirect away if NOT auth
-  const { data, status } = useSession();
-  const router = useRouter();
+  // // Redirect away if NOT auth
+  // const { data, status } = useSession();
+  // const router = useRouter();
 
-  useEffect(() => {
-    if (!data && status !== "loading") {
-      router.push("/auth");
-    }
-  }, [data, status, router]);
+  // useEffect(() => {
+  //   if (!data && status !== "loading") {
+  //     router.push("/auth");
+  //   }
+  // }, [data, status, router]);
 
-  if (status === "loading") {
-    return <p className={classes.profile}>Loading...</p>;
-  }
+  // if (status === "loading") {
+  //   return <p className={classes.profile}>Loading...</p>;
+  // }
 
   return (
     <section className={classes.profile}>
