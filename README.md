@@ -1,99 +1,90 @@
-# Optimizing NextJS Apps
+# Project: API Routes
 
 ## Introduction
 
-- Adding Meta and `<head>` tags
-- Re-using Components, Logic and Configuration
-- Optimizing Images
+- Adding a newsletter registration flow and comments feature
 
-## The Need for the `head` Metadata
+## Adding a `newsletter` route
 
-- The `<head>` content is necessary for search engines and browsers
-
-## Configuring the `head` content
-
-- We use the `Head` component from `next/head`
-- NextJS injects the content of the `Head` component to the actual `head` tag in the generated HTML page.
+- Create `/api/newsletter/register.ts`
   ```tsx
-  export default function Home(props: HomePageProps) {
-    return (
-      <div>
-        <Head>
-          <title>NextJS Events</title>
-          <meta name="description" content="Find the most exciting events near you..." />
-        </Head>
-        <EventsList events={props.featuredEvents} />
-      </div>
-    );
-  }
+  import { NextApiHandler } from "next";
+
+  const handler: NextApiHandler = (req, res) => {
+    if (req.method !== "POST") return;
+
+    console.log(req.body.email);
+  };
+
+  export default handler;
+  ```
+- Create the logic to invoke this api:
+  ```tsx
+  // components/newsletterRegistration.tsx
+  ...
+
+  	const registrationHandler = async (event: React.SyntheticEvent) => {
+      event.preventDefault();
+
+      // fetch user input (state or refs)
+      const email = emailRef.current?.value;
+
+      ///// optional: validate input
+
+      // send valid data to API
+      const result = await fetch("/api/newsletter/register", {
+        method: "POST",
+        body: JSON.stringify({ email })
+      });
+
+      console.log(result);
+  	};
   ```
 
-## A Common Head
+## Adding a Comments Route
 
-- We might want to separate the `Head` content to a separate variable that is prepended to all types of responses (data and error)
-
-## Working with the `_app.tsx` file
-
-- Global Head Settings across all pages
+- This api must be linked to a specific event so, we will create the path `/api/comments/[eventId]`.
   ```tsx
-  export default function App({ Component, pageProps }: AppProps) {
-    return (
-      <Layout>
-        <Head>
-          <title>NextJS Events</title>
-          <meta name="description" content="Find the most exciting events near you" />
-          <meta name="viewport" content="initial-scale=1.0, width=device-width" />
-        </Head>
-        <Component {...pageProps} />
-      </Layout>
-    );
-  }
-  ```
-- NextJS automatically merges head content by taking the latest one in case of conflicts
+  import { NextApiHandler } from "next";
 
-## `_document.tsx`
+  import { CommentData } from "../../../components/input/comments";
 
-- Must be directly under the `pages` directory
-- Allows customizing the entire HTML document
-- Has to be a class-based component
-  ```tsx
-  import Document, { Head, Html, Main, NextScript } from "next/document";
+  const handler: NextApiHandler = (req, res) => {
+    const { eventId } = req.query;
 
-  class MyDocument extends Document {
-    render() {
-      return (
-        <Html lang="en">
-          <Head />
-          <body>
-            <Main />
-            <NextScript />
-          </body>
-        </Html>
-      );
+    if (req.method === "POST") {
+      // validate
+      const { email, name, text } = JSON.parse(req.body) as CommentData;
+
+      if (
+        !email ||
+        email.trim().length === 0 ||
+        !name ||
+        name.trim().length === 0 ||
+        !text ||
+        text.trim().length == 0
+      ) {
+        res.status(422).json({ message: "Invalid Input" });
+        return;
+      }
+
+      const newComment = { id: new Date().toISOString(), email, name, text };
+      res.status(201).json({ message: "Comment added successfully", comment: newComment });
+    } else if (req.method === "GET") {
+      const fakeComments = [
+        { id: "c1", email: "Alice", text: "First Comment!" },
+        { id: "c2", email: "Bob", text: "Second Comment!" }
+      ];
+
+      res.status(200).json({ data: fakeComments });
     }
-  }
+    return;
+  };
 
-  export default MyDocument;
+  export default handler;
   ```
-  Note that the `Head` component is now imported from `next/document` and not `next/head`
-- One use of this is that we can add overlays by adding a div in this document:
-  ```tsx
-  <body>
-  	<div id="overlays"/>
-  		<Main>
-  		...
-  </body>
-  ```
+- Then, we invoke this API in the `newComment`, `comments` and `commentsList` components:
 
-## A Closer Look at Images
+#### Connecting to DB
 
-- The Images via `<img>` tag are not optimized
-- These images are huge, unoptimized images that always use the same format (instead of an optimized image format like `webp`)
-
-## The Next Image Component
-
-- The `Image` component will create multiple versions of an image on-the-fly depending upon the client capabilities.
-- We can pass in the `width` and `height` of the image to the component that determines the size of the image on the device (and not the actual width and height of the image).
-- Finding the right width and height will be a matter of hit and trial.
-- The optimized images are stored in the `cache/images` directory inside the build directory i.e., `.next`.
-- Images can be lazy loaded so that images that are not part of the viewport are not loaded by NextJS
+- This is beyond the scope of this course (see other backend courses for MongoDB connection, perhaps the [vidly](https://github.com/Rajil1213/vidly) repo)
