@@ -1,5 +1,7 @@
 import { useRef, useState } from "react";
 
+import { signIn } from "next-auth/react";
+
 import classes from "./authForm.module.css";
 
 function AuthForm() {
@@ -25,6 +27,9 @@ function AuthForm() {
 
       const data = result.json();
       console.log(data);
+    } else {
+      const result = await signIn("credentials", { redirect: false, email, password });
+      console.log(result);
     }
   };
 
