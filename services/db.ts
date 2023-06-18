@@ -29,3 +29,15 @@ export const insert = (collection: string, data: Record<string, unknown>) => {
 
   return data;
 };
+
+export const update = (collection: string, data: { email: string; password: string }) => {
+  const contents = find(collection);
+  const filepath = buildPath(collection);
+
+  const updateIndex = contents.findIndex((user: { email: string }) => user.email === data.email);
+  contents[updateIndex] = data;
+
+  writeFileSync(filepath, JSON.stringify(contents));
+
+  return data;
+};
