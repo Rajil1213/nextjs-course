@@ -19,7 +19,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
     };
   }
 
-  return { props: { session } }; // can be anything
+  return { props: { session } }; // used in the session provider
 };
 
 export default ProfilePage;
